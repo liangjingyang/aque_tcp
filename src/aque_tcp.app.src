@@ -1,0 +1,17 @@
+%% Copyright (c) 2013-2015, Liangjingyang <simple.continue@gmail.com>
+
+{application, aque_tcp, [
+	{id, "aque_tcp"},
+	{description, "Web Game and Mobel Game Tcp Mod"},
+	{vsn, "0.1"},
+	{modules, []},
+	{registered, [aque_tcp_sup, tcp_listener_sup, tcp_client_sup, tcp_acceptor_sup]},
+	{applications, [
+		kernel,
+		stdlib,
+		crypto
+	]},
+	{mod, {aque_tcp, []}},
+	{env, []}
+]}.
+

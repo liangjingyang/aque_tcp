@@ -1,0 +1,84 @@
+%% Copyright (c) 2013-2015, Liangjingyang <simple.continue@gmail.com>
+
+%% tcp_client进程调用
+
+-module(tcp_client_callback).
+
+-behaviour(tcp_client_behaviour).
+
+-export([
+	start/1,
+	terminate/2,
+	router/2,
+	decode/1,
+	encode/1
+    ]).
+
+-record(cb_state, {
+	router,
+	socket,
+
+	id = 0,
+   	accname = undefined,
+  	p_pid = undefined,
+
+	c_ip,
+	c_port
+    }).
+
+start(Socket) ->
+    case inet:peername(Socket) of
+        {ok, {Ip, Port}} ->
+            #cb_state{
+                router = fun router:before_login/2,
+                socket = Socket,
+                c_ip = Ip,
+                c_port = Port};
+        _ ->
+	    login_lost(ip_error),
+	    #cb_state{socket = Socket}
+    end.
+
+router(CBState, Data) ->
+    CBState2 = (CBState#cb_state.router)(Data, CBState),
+    CBState2.
+
+encode(Data) ->
+    encrypt(term_to_binary(Data)).
+
+decode(Binary) ->
+    binary_to_term(unencrypt(Binary)).
+
+terminate(_Reason, _CBState) ->
+    ok.
+
+encrypt(Binary) ->
+    Binary.
+
+unencrypt(Binary) ->
+    <<Method:8, _/binary>> = Binary,
+    case Method of
+	0 ->
+	    Binary;
+	254 ->
+	    unencrypt_method_1(Binary);
+	_ ->
+	    Binary
+    end.
+    
+unencrypt_method_1(Binary) ->
+    Size = erlang:byte_size(Binary),
+    HalfA = (Size-1) div 2,
+    HalfB = (Size-1) - HalfA,
+    X1 = (HalfB - 3 + 1) * 8,
+    X2 = (HalfA-1 + 1) * 8,
+
+    <<_:8, B:8, C:8, P:X1, O:X2>> = Binary,
+    B2 = bnot B,
+    C2 = bnot C,
+    <<131:8, O:X2, B2:8, C2:8, P:X1>>.
+
+
+login_lost(Reason) ->
+    self() ! {stop, Reason}.
+
