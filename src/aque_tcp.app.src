@@ -2,7 +2,7 @@
 
 {application, aque_tcp, [
 	{id, "aque_tcp"},
-	{description, "Web Game and Mobel Game Tcp Mod"},
+	{description, "Game server TCP network component written in Erlang"},
 	{vsn, "0.1"},
 	{modules, []},
 	{registered, [aque_tcp_sup, tcp_listener_sup, tcp_client_sup, tcp_acceptor_sup]},
