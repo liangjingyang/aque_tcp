@@ -6,27 +6,27 @@
 
 -export([start_link/1]).
 -export([
-        init/1, 
-        handle_call/3, 
-        handle_cast/2, 
-        handle_info/2, 
-        terminate/2, 
-        code_change/3
-    ]).
+         init/1, 
+         handle_call/3, 
+         handle_cast/2, 
+         handle_info/2, 
+         terminate/2, 
+         code_change/3
+        ]).
 -export([
-        i/1,
-        tcp_client_name/1,
-	get_data_size/0,
-	get_package_num/0
-    ]).
+         i/1,
+         tcp_client_name/1,
+         get_data_size/0,
+         get_package_num/0
+        ]).
 
 -record(state, {
-	socket,
-        heartbeat_timer = undefined,
-	last_heartbeat = 0,
-	cb_mod,
-	cb_state 
-    }).
+          socket,
+          heartbeat_timer = undefined,
+          last_heartbeat = 0,
+          cb_mod,
+          cb_state 
+         }).
 
 start_link(CBMod) ->
     gen_server:start_link(?MODULE, [CBMod], []).
@@ -80,27 +80,24 @@ handle_cast(_Request, _State) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
 
-handle_info(Request, State) ->
-    do_handle_info(Request, State).
-
-do_handle_info({inet_async, Socket, _, {ok, Binary}}, #state{cb_mod = CBMod, cb_state = CBState} = State) ->
+handle_info({inet_async, Socket, _, {ok, Binary}}, #state{cb_mod = CBMod, cb_state = CBState} = State) ->
     add_package_num(),
     recv_data_size(Binary),
     Data = CBMod:decode(Binary),
     CBState2 = CBMod:router(CBState, Data),
     async_recv(Socket, 0, -1),
     {noreply, State#state{last_heartbeat = nowsec(), cb_state = CBState2}};
-do_handle_info({inet_async, Socket, _, {error,timeout}}, State) ->
+handle_info({inet_async, Socket, _, {error,timeout}}, State) ->
     async_recv(Socket, 0, -1),
     {noreply, State};
-do_handle_info({inet_async, Socket, _, {error,closed}}, State) ->
+handle_info({inet_async, Socket, _, {error,closed}}, State) ->
     {stop, {error, closed, inet:peername(Socket)}, State};
-do_handle_info({send, Data}, #state{cb_mod = CBMod} = State) ->
+handle_info({send, Data}, #state{cb_mod = CBMod} = State) ->
     Binary = CBMod:encode(Data),
     send_data_size(Binary),
     gen_tcp:send(State#state.socket, Binary),
     {noreply, State};
-do_handle_info({start, Socket}, State) ->
+handle_info({start, Socket}, State) ->
     async_recv(Socket, 0, -1),
     CBState = (State#state.cb_mod):start(Socket),
     Timer = erlang:send_after(40 * 1000, self(), {timer, check_heartbeat}),
@@ -108,7 +105,7 @@ do_handle_info({start, Socket}, State) ->
     erase_package_num(),
     State2 = State#state{socket = Socket, cb_state = CBState, last_heartbeat = nowsec(), heartbeat_timer = Timer},
     {noreply, State2};
-do_handle_info({timer, check_heartbeat}, State) ->
+handle_info({timer, check_heartbeat}, State) ->
     Timer = erlang:send_after(120 * 1000, self(), {timer, check_heartbeat}),
     Last = State#state.last_heartbeat,
     Now = nowsec(),
@@ -119,23 +116,26 @@ do_handle_info({timer, check_heartbeat}, State) ->
             ignore
     end,
     {noreply, State#state{heartbeat_timer = Timer}};
-do_handle_info({timer, check_hack}, State) ->
+handle_info({timer, check_hack}, State) ->
     erlang:send_after(1 * 1000, self(), {timer, check_hack}),
     Num = get_package_num(),
     case Num > 30 of
-	true ->
-	    login_lost({hack, Num});
-	false ->
-	    erase_package_num()
+        true ->
+            login_lost({hack, Num});
+        false ->
+            erase_package_num()
     end,
     {noreply, State};
-do_handle_info({'DOWN', _MonitorRef, _Type, Pid, _Info}, State) ->
+handle_info({'DOWN', _MonitorRef, _Type, Pid, _Info}, State) ->
     {stop, {'DOWN', Pid}, State};
-do_handle_info({'EXIT', From, Reason}, State) ->
+handle_info({'EXIT', From, Reason}, State) ->
     {stop, {'EXIT', From, Reason}, State};
-do_handle_info({stop, Reason}, State) ->
+handle_info({stop, Reason}, State) ->
     {stop, {stop, Reason}, State};
-do_handle_info(_Request, State) ->
+handle_info({cb, Request}, #state{cb_mod = CBMod, cb_state = CBState}) ->
+    CBState2 = CBMod:handle_info(Request, CBState),
+    {noreply, CBState2};
+handle_info(_Request, State) ->
     {noreply, State}.
 
 %% --------------------------------------------------------------------
@@ -162,11 +162,11 @@ code_change(_oldvsn, State, _extra) ->
 async_recv(Sock, Length, Timeout) when is_port(Sock) ->
     case catch prim_inet:async_recv(Sock, Length, Timeout) of
         {ok, Res} -> 
-	    Res; 
+            Res; 
         {error, Reason} -> 
-	    erlang:throw(Reason);
+            erlang:throw(Reason);
         Res -> 
-	    erlang:throw(Res)
+            erlang:throw(Res)
     end.
 
 login_lost(Reason) ->
@@ -199,10 +199,10 @@ get_data_size() ->
 
 add_package_num() ->
     case erlang:get(package_num) of
-	undefined ->
-	    erlang:put(package_num, 1);
-	Num ->
-	    erlang:put(package_num, Num + 1)
+        undefined ->
+            erlang:put(package_num, 1);
+        Num ->
+            erlang:put(package_num, Num + 1)
     end.
 
 erase_package_num() ->
@@ -210,10 +210,10 @@ erase_package_num() ->
 
 get_package_num() ->
     case erlang:get(package_num) of
-	Num when is_integer(Num) ->
-	    Num;
-	_ ->
-	    0
+        Num when is_integer(Num) ->
+            Num;
+        _ ->
+            0
     end.
 
 nowsec() ->

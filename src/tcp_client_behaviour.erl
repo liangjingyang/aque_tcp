@@ -6,6 +6,8 @@
 
 -callback start(Socket::port()) -> CBState::record().
 
+-callback handle_info(Resquest::term(), CBState::record()) -> CBState2::record().
+
 -callback terminate(Reason::term(), CBState::record()) -> ok.
 
 -callback router(CBState::record(), Data::term()) -> CBState2::record().

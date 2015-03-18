@@ -8,6 +8,7 @@
 
 -export([
 	start/1,
+    handle_info/2,
 	terminate/2,
 	router/2,
 	decode/1,
@@ -38,6 +39,9 @@ start(Socket) ->
 	    login_lost(ip_error),
 	    #cb_state{socket = Socket}
     end.
+
+handle_info(_Request, CBState) ->
+    CBState.
 
 router(CBState, Data) ->
     CBState2 = (CBState#cb_state.router)(Data, CBState),
