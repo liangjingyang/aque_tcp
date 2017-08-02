@@ -18,7 +18,7 @@ start() ->
     application:start(?APP).
 
 start(_Type, _Args) ->
-    gateway_sup:start_link().
+    aque_tcp_sup:start_link().
 
 start_listener(AcceptorNum, Port, TcpOptions) ->
     start_listener(AcceptorNum, Port, TcpOptions, tcp_client_callback).
